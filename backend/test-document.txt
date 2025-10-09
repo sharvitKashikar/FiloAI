@@ -1,0 +1,5 @@
+This is a test document about AI and machine learning. 
+AI is transforming the world.
+Machine learning helps computers learn from data.
+Natural language processing is a key component of AI.
+Deep learning uses neural networks to solve complex problems.

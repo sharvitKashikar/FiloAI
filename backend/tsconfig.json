@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    // File Layout
+    "rootDir": "./src",
+    "outDir": "./dist",
+
+    // Environment Settings
+    "module": "commonjs",           // Changed: Use commonjs for Node.js
+    "target": "ES2020",             // Changed: ES2020 is more stable for Node.js
+    "lib": ["ES2020"],              // Added: For Node.js compatibility
+    "types": ["node"],              // Added: Enable Node.js types
+    "esModuleInterop": true,
+    "resolveJsonModule": true,      // Added: Allow importing JSON files
+    "moduleResolution": "node",     // Added: Standard Node.js module resolution
+
+    // Other Outputs
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    // Stricter Typechecking Options
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+
+    // Recommended Options
+    "strict": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true  // Added: Prevent case issues
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]  // Added: Exclude dist folder too
+}
