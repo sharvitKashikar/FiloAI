@@ -21,13 +21,23 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(cors({
-  origin: [
-    'https://filoai.vercel.app',
-    'https://filoai-ejn0o5kr8-sharvit-s-projects.vercel.app',
-    'https://filoai-git-main-sharvit-s-projects.vercel.app',
-    'http://localhost:5173',
-    'http://localhost:3000'
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost for development
+    if (origin.startsWith('http://localhost')) {
+      return callback(null, true);
+    }
+    
+    // Allow all Vercel deployments for this project
+    if (origin.includes('filoai') && origin.includes('vercel.app')) {
+      return callback(null, true);
+    }
+    
+    // Reject all other origins
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 app.use(express.json());
