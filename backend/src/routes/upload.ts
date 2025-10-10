@@ -4,6 +4,8 @@ import fs from 'fs/promises';
 import { chunkText } from '../services/chunking';
 import { createEmbeddings } from '../services/embedding';
 import { getIndex } from '../services/pinecone';
+import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { prisma } from '../lib/prisma';
 
 const router = Router();
 
@@ -15,18 +17,20 @@ const upload = multer({
   }
 });
 
-// POST /upload - Handle file uploads
-router.post('/upload', upload.single('file'), async (req, res) => {
+// POST /upload - Handle file uploads (PROTECTED)
+router.post('/upload', authenticateToken, upload.single('file'), async (req: AuthRequest, res) => {
   console.log('Upload request has been received');
 
   try {
-    // 1. to see if file exists
+    // 1. Check if file exists
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // 2. Get userId from auth middleware
+    const userId = req.userId!;
     const fileName = req.file.originalname;
-    console.log(`Processing file: ${fileName}`);
+    console.log(`Processing file: ${fileName} for user: ${userId}`);
 
     // 2. Read file content
     const content = await fs.readFile(req.file.path, 'utf-8');
@@ -42,7 +46,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const embeddings = await createEmbeddings(texts);
     console.log(`Created ${embeddings.length} embeddings`);
 
-    // 5. Prepare vectors for Pinecone
+    // 5. Prepare vectors for Pinecone (with userId)
     const vectors = chunks.map((chunk, index) => ({
       id: `${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_chunk_${index}_${Date.now()}`,
       values: embeddings[index]!,
@@ -50,7 +54,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         text: chunk.text,
         fileName: chunk.metadata.fileName,
         chunkIndex: chunk.metadata.chunkIndex,
-        pageNumber: chunk.metadata.pageNumber
+        pageNumber: chunk.metadata.pageNumber,
+        userId: userId  // Add userId to metadata for filtering
       }
     }));
 
@@ -60,12 +65,23 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     await index.upsert(vectors);
     console.log('Saved to Pinecone successfully');
 
-    // 7. Clean up temporary file
+    // 7. Save document metadata to database
+    console.log('Saving to database...');
+    const document = await prisma.document.create({
+      data: {
+        fileName: fileName,
+        userId: userId
+      }
+    });
+    console.log(`Document saved to database with ID: ${document.id}`);
+
+    // 8. Clean up temporary file
     await fs.unlink(req.file.path);
 
-    // 8. Return success response
+    // 9. Return success response
     res.json({
       success: true,
+      documentId: document.id,
       fileName,
       chunksProcessed: chunks.length,
       message: 'File uploaded and indexed successfully!'

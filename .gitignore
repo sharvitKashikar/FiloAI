@@ -35,6 +35,7 @@ uploads/
 
 # Backup folders
 frontend-old-backup/
+frontend-backup-customizations/
 
 # Lock files (optional - keep package-lock.json but ignore others)
 *.lock

@@ -2,17 +2,13 @@ import { Agent } from '@voltagent/core';
 import { openai } from '@ai-sdk/openai';
 import { getRetrievalTool } from '../tools/retrieval';
 
-// Lazy-initialized chat agent
-let agentInstance: Agent | null = null;
-
-// Get or create the chat agent
-export const getChatAgent = (): Agent => {
-  if (!agentInstance) {
-    // Create the chat agent using OpenAI directly
-    agentInstance = new Agent({
-      name: 'document-qa-assistant',
-      
-      instructions: `You are a helpful document assistant that answers questions based on uploaded documents.
+// Get or create the chat agent with userId for filtering
+export const getChatAgent = (userId?: string): Agent => {
+  // Create a new agent instance with userId-specific retrieval tool
+  const agent = new Agent({
+    name: 'document-qa-assistant',
+    
+    instructions: `You are a helpful document assistant that answers questions based on uploaded documents.
 
 IMPORTANT RULES:
 1. ALWAYS use the search_documents tool to find information before answering
@@ -42,12 +38,8 @@ These advantages make cloud computing attractive for small and medium enterprise
       
       model: openai('gpt-4o-mini'),
       
-      tools: [getRetrievalTool()],
+      tools: [getRetrievalTool(userId)],  // Pass userId to filter documents
     });
-  }
   
-  return agentInstance;
+  return agent;
 };
-
-// Legacy export for backward compatibility (if needed elsewhere)
-export const chatAgent = getChatAgent;

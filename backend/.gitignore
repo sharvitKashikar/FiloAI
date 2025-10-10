@@ -4,3 +4,9 @@ dist/
 uploads/
 *.log
 .DS_Store
+
+# Prisma
+/prisma/migrations/
+/src/generated/prisma
+*.db
+*.db-journal

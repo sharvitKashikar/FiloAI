@@ -3,33 +3,37 @@ import { z } from 'zod';
 import { getIndex } from '../services/pinecone';
 import { createEmbedding } from '../services/embedding';
 
-// Lazy-initialized retrieval tool
-let toolInstance: any = null;
-
-export const getRetrievalTool = () => {
-  if (!toolInstance) {
-    toolInstance = createTool({
-      name: 'search_documents',
-      description: 'Search through uploaded documents to find relevant information. Use this tool whenever the user asks a question about their documents.',
-      
-      parameters: z.object({
-        query: z.string().describe('The search query or question to look up in the documents')
-      }),
-      
-      execute: async ({ query }) => {
+// Create retrieval tool with userId for filtering
+export const getRetrievalTool = (userId?: string) => {
+  return createTool({
+    name: 'search_documents',
+    description: 'Search through uploaded documents to find relevant information. Use this tool whenever the user asks a question about their documents.',
+    
+    parameters: z.object({
+      query: z.string().describe('The search query or question to look up in the documents')
+    }),
+    
+    execute: async ({ query }) => {
     try {
       console.log(`Searching for: "${query}"`);
       
       // 1. Convert query to embedding
       const queryEmbedding = await createEmbedding(query);
       
-      // 2. Search Pinecone for similar vectors
+      // 2. Search Pinecone for similar vectors (filtered by userId)
       const index = getIndex();
-      const searchResults = await index.query({
+      const queryOptions: any = {
         vector: queryEmbedding,
         topK: 5,
         includeMetadata: true
-      });
+      };
+      
+      // Add filter if userId is provided
+      if (userId) {
+        queryOptions.filter = { userId: { $eq: userId } };
+      }
+      
+      const searchResults = await index.query(queryOptions);
       
       console.log(`Found ${searchResults.matches.length} matches`);
       
@@ -76,11 +80,5 @@ export const getRetrievalTool = () => {
       };
     }
   }
-    });
-  }
-  
-  return toolInstance;
+  });
 };
-
-// Legacy export for backward compatibility (just the getter, not called yet)
-export const retrievalTool = getRetrievalTool;

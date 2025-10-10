@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import axios from 'axios';
+import { uploadAPI } from '@/lib/api';
 
 export interface UploadedFile {
   name: string;
@@ -32,21 +32,13 @@ export function FileUpload({ onFileUploaded, uploadedFiles }: FileUploadProps) {
     setUploading(true);
     setProgress(0);
 
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
       // Simulate progress
       const progressInterval = setInterval(() => {
         setProgress(prev => Math.min(prev + 10, 90));
       }, 200);
 
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      await axios.post(`${apiUrl}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      await uploadAPI.uploadFile(file);
 
       clearInterval(progressInterval);
       setProgress(100);
@@ -112,33 +104,33 @@ export function FileUpload({ onFileUploaded, uploadedFiles }: FileUploadProps) {
   };
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6 h-full">
+    <div className="flex flex-col gap-6 h-full">
       <Card
         {...getRootProps()}
-        className={`border-2 border-dashed p-6 sm:p-8 md:p-10 text-center cursor-pointer transition-all duration-300 ${
+        className={`border-2 border-dashed p-6 sm:p-8 text-center cursor-pointer transition-all duration-300 ${
           isDragActive
             ? 'border-primary bg-primary/5 scale-[1.02]'
             : 'border-border hover:border-primary/50 hover:bg-accent/5'
         }`}
       >
         <input {...getInputProps()} />
-        <div className="flex flex-col items-center gap-3 sm:gap-4">
-          <div className="p-3 sm:p-4 rounded-full bg-primary/10">
-            <Upload className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+        <div className="flex flex-col items-center gap-4">
+          <div className="p-4 rounded-full bg-primary/10">
+            <Upload className="h-8 w-8 text-primary" />
           </div>
           <div>
-            <h3 className="text-base sm:text-lg font-semibold mb-2">
+            <h3 className="text-lg font-semibold mb-2">
               {isDragActive ? 'Drop your file here' : 'Upload a document'}
             </h3>
             <p className="text-sm text-muted-foreground">
               Drag and drop or click to select a file
             </p>
-            <p className="text-xs text-muted-foreground mt-1 sm:mt-2">
-              Supports PDF, TXT, DOC, DOCX
+            <p className="text-xs text-muted-foreground mt-2">
+              Supports TXT for now
             </p>
           </div>
           {!isDragActive && (
-            <Button type="button" variant="outline" size="sm" className="mt-1">
+            <Button type="button" variant="outline" size="sm">
               Browse Files
             </Button>
           )}
@@ -158,46 +150,44 @@ export function FileUpload({ onFileUploaded, uploadedFiles }: FileUploadProps) {
       )}
 
       {uploadedFiles.length > 0 && (
-        <Card className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <div className="p-3 sm:p-4 border-b bg-muted/30">
-            <h3 className="text-sm sm:text-base font-semibold">Uploaded Files</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">
+        <Card className="flex-1 overflow-hidden flex flex-col">
+          <div className="p-4 border-b bg-muted/30">
+            <h3 className="font-semibold">Uploaded Files</h3>
+            <p className="text-sm text-muted-foreground">
               {uploadedFiles.length} {uploadedFiles.length === 1 ? 'file' : 'files'} uploaded
             </p>
           </div>
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2 sm:space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {uploadedFiles.map((file, index) => (
-              <Card key={index} className="p-3 sm:p-4 hover:shadow-md transition-shadow">
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10 shrink-0">
-                    <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <Card key={index} className="p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                    <FileText className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium text-xs sm:text-sm truncate">{file.name}</p>
+                      <p className="font-medium text-sm truncate">{file.name}</p>
                       <Badge
                         variant={file.status === 'success' ? 'default' : 'destructive'}
-                        className="shrink-0 text-xs"
+                        className="shrink-0"
                       >
                         {file.status === 'success' ? (
                           <>
                             <CheckCircle2 className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">Success</span>
-                            <span className="sm:hidden">✓</span>
+                            Success
                           </>
                         ) : (
                           <>
                             <AlertCircle className="h-3 w-3 mr-1" />
-                            <span className="hidden sm:inline">Error</span>
-                            <span className="sm:hidden">!</span>
+                            Error
                           </>
                         )}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 sm:gap-3 mt-1 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                       <span>{formatFileSize(file.size)}</span>
                       <span>•</span>
-                      <span className="truncate">{formatDate(file.uploadedAt)}</span>
+                      <span>{formatDate(file.uploadedAt)}</span>
                     </div>
                   </div>
                 </div>
