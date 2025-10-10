@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user);
     toast({
       title: 'Account created!',
-      description: 'Welcome to ShardulAI',
+      description: 'Welcome to FiloAI',
     });
   };
 
