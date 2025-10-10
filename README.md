@@ -4,12 +4,12 @@ A modern Document Q&A application powered by AI that allows users to upload docu
 
 ## Features
 
-- 📄 **Document Upload**: Support for PDF, TXT, DOC, DOCX files
-- 🤖 **AI-Powered Q&A**: Ask questions and get intelligent answers from your documents
-- 🎯 **Source Citations**: Every answer includes source references with page numbers
-- 💬 **Chat Interface**: Beautiful, responsive chat UI built with React and shadcn/ui
-- 🔍 **Semantic Search**: Uses vector embeddings for accurate information retrieval
-- 📱 **Responsive Design**: Works seamlessly on mobile, tablet, and desktop
+-  **Document Upload**: Supports TXT
+- **AI-Powered Q&A**: Ask questions and get intelligent answers from your documents
+- **Source Citations**: Every answer includes source references with page numbers
+- **Chat Interface**: Beautiful, responsive chat UI built with React and shadcn/ui
+- **Semantic Search**: Uses vector embeddings for accurate information retrieval
+- **Responsive Design**: Works seamlessly on mobile, tablet, and desktop
 
 ## Tech Stack
 
