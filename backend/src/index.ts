@@ -23,6 +23,8 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({
   origin: [
     'https://filoai.vercel.app',
+    'https://filoai-ejn0o5kr8-sharvit-s-projects.vercel.app',
+    'https://filoai-git-main-sharvit-s-projects.vercel.app',
     'http://localhost:5173',
     'http://localhost:3000'
   ],
