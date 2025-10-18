@@ -3,11 +3,13 @@ import { z } from 'zod';
 import { getIndex } from '../services/pinecone';
 import { createEmbedding } from '../services/embedding';
 
-// Create retrieval tool with userId for filtering
-export const getRetrievalTool = (userId?: string) => {
+// Create retrieval tool with userId and optional documentId for filtering
+export const getRetrievalTool = (userId?: string, documentId?: string) => {
   return createTool({
     name: 'search_documents',
-    description: 'Search through uploaded documents to find relevant information. Use this tool whenever the user asks a question about their documents.',
+    description: documentId 
+      ? 'Search through the specific uploaded document to find relevant information. Use this tool whenever the user asks a question about this document.'
+      : 'Search through uploaded documents to find relevant information. Use this tool whenever the user asks a question about their documents.',
     
     parameters: z.object({
       query: z.string().describe('The search query or question to look up in the documents')
@@ -16,21 +18,33 @@ export const getRetrievalTool = (userId?: string) => {
     execute: async ({ query }) => {
     try {
       console.log(`Searching for: "${query}"`);
+      if (documentId) {
+        console.log(`Filtering by documentId: ${documentId}`);
+      }
       
       // 1. Convert query to embedding
       const queryEmbedding = await createEmbedding(query);
       
-      // 2. Search Pinecone for similar vectors (filtered by userId)
+      // 2. Search Pinecone for similar vectors (filtered by userId and optional documentId)
       const index = getIndex();
       const queryOptions: any = {
         vector: queryEmbedding,
-        topK: 5,
+        topK: 10, // Increased from 5 to get more context
         includeMetadata: true
       };
       
-      // Add filter if userId is provided
+      // Build filter based on provided parameters
+      const filter: any = {};
       if (userId) {
-        queryOptions.filter = { userId: { $eq: userId } };
+        filter.userId = { $eq: userId };
+      }
+      if (documentId) {
+        filter.documentId = { $eq: documentId };
+      }
+      
+      // Apply filter if any conditions exist
+      if (Object.keys(filter).length > 0) {
+        queryOptions.filter = filter;
       }
       
       const searchResults = await index.query(queryOptions);
@@ -39,12 +53,12 @@ export const getRetrievalTool = (userId?: string) => {
       
       // Log similarity scores for debugging
       searchResults.matches.forEach((match, i) => {
-        console.log(`Match ${i + 1} score: ${match.score?.toFixed(3)}`);
+        console.log(`Match ${i + 1} score: ${match.score?.toFixed(3)} - ${match.metadata?.fileName}`);
       });
       
       // 3. Filter results by relevance score (only keep good matches)
       const relevantResults = searchResults.matches.filter(
-        match => match.score && match.score > 0.5  // Lowered threshold for testing
+        match => match.score && match.score > 0.05  // Lowered threshold to include more context
       );
       
       console.log(`Relevant results after filtering: ${relevantResults.length}`);
@@ -53,7 +67,9 @@ export const getRetrievalTool = (userId?: string) => {
       if (relevantResults.length === 0) {
         return {
           found: false,
-          message: 'No relevant information found in the uploaded documents.'
+          message: documentId 
+            ? 'No relevant information found in this document.'
+            : 'No relevant information found in the uploaded documents.'
         };
       }
       

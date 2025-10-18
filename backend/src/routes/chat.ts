@@ -10,7 +10,7 @@ router.post('/chat', authenticateToken, async (req: AuthRequest, res) => {
   console.log('Chat request received');
 
   try {
-    const { message, chatId } = req.body;
+    const { message, chatId, documentId } = req.body;
     const userId = req.userId!;
 
     // 1. Validate input
@@ -19,8 +19,23 @@ router.post('/chat', authenticateToken, async (req: AuthRequest, res) => {
     }
 
     console.log(`User (${userId}): ${message}`);
+    if (documentId) {
+      console.log(`Document context: ${documentId}`);
+    }
 
-    // 2. Find or create chat session
+    // 2. If documentId is provided, verify it exists and belongs to user
+    let document = null;
+    if (documentId) {
+      document = await prisma.document.findFirst({
+        where: { id: documentId, userId },
+      });
+      if (!document) {
+        return res.status(404).json({ error: 'Document not found or access denied' });
+      }
+      console.log(`Using document: ${document.fileName}`);
+    }
+
+    // 3. Find or create chat session
     let chat;
     if (chatId) {
       // Use existing chat
@@ -31,17 +46,21 @@ router.post('/chat', authenticateToken, async (req: AuthRequest, res) => {
         return res.status(404).json({ error: 'Chat not found' });
       }
     } else {
-      // Create new chat
+      // Create new chat with document reference if provided
+      const chatTitle = document 
+        ? `Chat about ${document.fileName}` 
+        : message.substring(0, 50) + '...';
+      
       chat = await prisma.chat.create({
         data: {
-          title: message.substring(0, 50) + '...',
+          title: chatTitle,
           userId,
         },
       });
       console.log(`Created new chat: ${chat.id}`);
     }
 
-    // 3. Save user message to database
+    // 4. Save user message to database
     const userMessage = await prisma.message.create({
       data: {
         chatId: chat.id,
@@ -50,13 +69,13 @@ router.post('/chat', authenticateToken, async (req: AuthRequest, res) => {
       },
     });
 
-    // 4. Execute the chat agent with userId for filtering
-    const agent = getChatAgent(userId);
+    // 5. Execute the chat agent with userId and optional documentId for filtering
+    const agent = getChatAgent(userId, documentId);
     const result = await agent.generateText(message);
 
     console.log(`Assistant: ${result.text?.substring(0, 100)}...`);
 
-    // 5. Save assistant response to database
+    // 6. Save assistant response to database
     const assistantMessage = await prisma.message.create({
       data: {
         chatId: chat.id,
@@ -65,12 +84,13 @@ router.post('/chat', authenticateToken, async (req: AuthRequest, res) => {
       },
     });
 
-    // 6. Return response with chat info
+    // 7. Return response with chat info
     res.json({
       success: true,
       chatId: chat.id,
       response: result.text || result,
       messageId: assistantMessage.id,
+      documentId: documentId || null,
     });
 
   } catch (error: any) {

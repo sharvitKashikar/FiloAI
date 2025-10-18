@@ -19,7 +19,8 @@ export async function createEmbedding(text: string): Promise<number[]> {
     const openai = getOpenAIClient();
     const response = await openai.embeddings.create({
       model: "text-embedding-3-small",
-      input: text
+      input: text,
+      dimensions: 1024 // Match Pinecone index dimension
     });
     
     return response.data[0]!.embedding;
@@ -44,7 +45,8 @@ export async function createEmbeddings(texts: string[]): Promise<number[][]> {
       
       const response = await openai.embeddings.create({
         model: "text-embedding-3-small",
-        input: batch
+        input: batch,
+        dimensions: 1024 // Match Pinecone index dimension
       });
       
       // Extract embeddings from response
