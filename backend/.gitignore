@@ -10,3 +10,5 @@ uploads/
 /src/generated/prisma
 *.db
 *.db-journal
+temp/
+**/temp/
