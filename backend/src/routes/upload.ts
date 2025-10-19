@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import multer from 'multer';
 import fs from 'fs/promises';
+import path from 'path';
 import { chunkText } from '../services/chunking';
 import { createEmbeddings } from '../services/embedding';
 import { getIndex } from '../services/pinecone';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
+import { extractTextFromPDF } from '../services/pdfProcessor';
 
 const router = Router();
 
@@ -14,6 +16,17 @@ const upload = multer({
   dest: 'uploads/',
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf'];
+    const allowedExtensions = ['.txt', '.md', '.pdf'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .txt, .md, and .pdf files are allowed'));
+    }
   }
 });
 
@@ -32,9 +45,18 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
     const fileName = req.file.originalname;
     console.log(`Processing file: ${fileName} for user: ${userId}`);
 
-    // 2. Read file content
-    const content = await fs.readFile(req.file.path, 'utf-8');
-    console.log(`Total File size: ${content.length} characters`);
+    // 2. Read file content based on file type
+    const fileExtension = path.extname(fileName).toLowerCase();
+    let content: string;
+    
+    if (fileExtension === '.pdf') {
+      console.log('Processing PDF with OCR...');
+      content = await extractTextFromPDF(req.file.path);
+      console.log(`Extracted text from PDF: ${content.length} characters`);
+    } else {
+      content = await fs.readFile(req.file.path, 'utf-8');
+      console.log(`Total File size: ${content.length} characters`);
+    }
 
     // 3. Chunk the text
     const chunks = chunkText(content, fileName);
@@ -70,7 +92,8 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
     const document = await prisma.document.create({
       data: {
         fileName: fileName,
-        userId: userId
+        userId: userId,
+        fileType: fileExtension
       }
     });
     console.log(`Document saved to database with ID: ${document.id}`);

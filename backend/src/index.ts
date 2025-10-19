@@ -13,6 +13,7 @@ dotenv.config();
 console.log('Environment check:');
 console.log('PINECONE_API_KEY:', process.env.PINECONE_API_KEY ? '✓ Set' : '✗ Missing');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✓ Set' : '✗ Missing');
+console.log('MISTRAL_API_KEY:', process.env.MISTRAL_API_KEY ? '✓ Set' : '✗ Missing');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✓ Set' : '✗ Missing');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
 

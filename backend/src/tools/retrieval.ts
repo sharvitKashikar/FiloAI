@@ -35,8 +35,6 @@ export const getRetrievalTool = (userId?: string) => {
       
       const searchResults = await index.query(queryOptions);
       
-      console.log(`Found ${searchResults.matches.length} matches`);
-      
       // Log similarity scores for debugging
       searchResults.matches.forEach((match, i) => {
         console.log(`Match ${i + 1} score: ${match.score?.toFixed(3)}`);
@@ -44,7 +42,7 @@ export const getRetrievalTool = (userId?: string) => {
       
       // 3. Filter results by relevance score (only keep good matches)
       const relevantResults = searchResults.matches.filter(
-        match => match.score && match.score > 0.5  // Lowered threshold for testing
+        match => match.score && match.score > 0.1  // Lowered threshold for testing
       );
       
       console.log(`Relevant results after filtering: ${relevantResults.length}`);
@@ -62,6 +60,8 @@ export const getRetrievalTool = (userId?: string) => {
         text: match.metadata?.text || '',
         fileName: match.metadata?.fileName || 'unknown',
         pageNumber: match.metadata?.pageNumber || 0,
+        chunkIndex: match.metadata?.chunkIndex || 0,
+        fileType: (match.metadata?.fileName as string)?.endsWith('.pdf') ? 'PDF' : 'Text',
         relevanceScore: match.score
       }));
       
