@@ -50,8 +50,8 @@ router.post('/chat', authenticateToken, async (req: AuthRequest, res) => {
       },
     });
 
-    // 4. Execute the chat agent with userId for filtering
-    const agent = getChatAgent(userId);
+    // 4. Execute the chat agent with userId and chatId for filtering
+    const agent = getChatAgent(userId, chat.id);
     const result = await agent.generateText(message);
 
     console.log(`Assistant: ${result.text?.substring(0, 100)}...`);
@@ -138,6 +138,46 @@ router.get('/chats/:chatId', authenticateToken, async (req: AuthRequest, res) =>
   } catch (error: any) {
     console.error('Get chat messages error:', error);
     res.status(500).json({ error: 'Failed to get chat messages' });
+  }
+});
+
+// GET /chats/:chatId/documents - Get documents for a specific chat (PROTECTED)
+router.get('/chats/:chatId/documents', authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!;
+    const chatId = req.params.chatId;
+
+    if (!chatId) {
+      return res.status(400).json({ error: 'Chat ID is required' });
+    }
+
+    // Verify chat belongs to user
+    const chat = await prisma.chat.findFirst({
+      where: { id: chatId, userId },
+    });
+
+    if (!chat) {
+      return res.status(404).json({ error: 'Chat not found' });
+    }
+
+    // Get documents for this chat
+    const chatDocuments = await prisma.chatDocument.findMany({
+      where: { chatId },
+      include: {
+        document: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const documents = chatDocuments.map(cd => cd.document);
+
+    res.json({
+      success: true,
+      documents,
+    });
+  } catch (error: any) {
+    console.error('Get chat documents error:', error);
+    res.status(500).json({ error: 'Failed to get chat documents' });
   }
 });
 

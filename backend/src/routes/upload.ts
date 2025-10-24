@@ -40,15 +40,31 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // 2. Get userId from auth middleware
+    // 2. Get userId and optional chatId from request
     const userId = req.userId!;
+    const chatId = req.body.chatId;
     const fileName = req.file.originalname;
-    console.log(`Processing file: ${fileName} for user: ${userId}`);
+    console.log(`Processing file: ${fileName} for user: ${userId}${chatId ? `, chat: ${chatId}` : ''}`);
 
-    // 2. Read file content based on file type
+    // 3. If chatId provided, verify chat exists and belongs to user
+    if (chatId) {
+      const chat = await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          userId: userId
+        }
+      });
+
+      if (!chat) {
+        await fs.unlink(req.file.path);
+        return res.status(404).json({ error: 'Chat not found or access denied' });
+      }
+    }
+
+    // 4. Read file content based on file type
     const fileExtension = path.extname(fileName).toLowerCase();
     let content: string;
-    
+
     if (fileExtension === '.pdf') {
       console.log('Processing PDF with OCR...');
       content = await extractTextFromPDF(req.file.path);
@@ -58,36 +74,17 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
       console.log(`Total File size: ${content.length} characters`);
     }
 
-    // 3. Chunk the text
+    // 5. Chunk the text
     const chunks = chunkText(content, fileName);
     console.log(`Created ${chunks.length} chunks`);
 
-    // 4. Create embeddings for all chunks
+    // 6. Create embeddings for all chunks
     console.log('Creating embeddings........');
     const texts = chunks.map(chunk => chunk.text);
     const embeddings = await createEmbeddings(texts);
     console.log(`Created ${embeddings.length} embeddings`);
 
-    // 5. Prepare vectors for Pinecone (with userId)
-    const vectors = chunks.map((chunk, index) => ({
-      id: `${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_chunk_${index}_${Date.now()}`,
-      values: embeddings[index]!,
-      metadata: {
-        text: chunk.text,
-        fileName: chunk.metadata.fileName,
-        chunkIndex: chunk.metadata.chunkIndex,
-        pageNumber: chunk.metadata.pageNumber,
-        userId: userId  // Add userId to metadata for filtering
-      }
-    }));
-
-    // 6. Upload to Pinecone
-    console.log('Saving to Pinecone...');
-    const index = getIndex();
-    await index.upsert(vectors);
-    console.log('Saved to Pinecone successfully');
-
-    // 7. Save document metadata to database
+    // 7. Save document metadata to database first (to get documentId)
     console.log('Saving to database...');
     const document = await prisma.document.create({
       data: {
@@ -97,6 +94,37 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
       }
     });
     console.log(`Document saved to database with ID: ${document.id}`);
+
+    // 8. Prepare vectors for Pinecone (with userId and documentId)
+    const vectors = chunks.map((chunk, index) => ({
+      id: `${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_chunk_${index}_${Date.now()}`,
+      values: embeddings[index]!,
+      metadata: {
+        text: chunk.text,
+        fileName: chunk.metadata.fileName,
+        chunkIndex: chunk.metadata.chunkIndex,
+        pageNumber: chunk.metadata.pageNumber,
+        userId: userId,
+        documentId: document.id  // Add documentId for chat-specific filtering
+      }
+    }));
+
+    // 9. Upload to Pinecone
+    console.log('Saving to Pinecone...');
+    const index = getIndex();
+    await index.upsert(vectors);
+    console.log('Saved to Pinecone successfully');
+
+    // 10. If chatId provided, create ChatDocument association
+    if (chatId) {
+      await prisma.chatDocument.create({
+        data: {
+          chatId: chatId,
+          documentId: document.id
+        }
+      });
+      console.log(`Associated document with chat: ${chatId}`);
+    }
 
     // 8. Clean up temporary file
     await fs.unlink(req.file.path);

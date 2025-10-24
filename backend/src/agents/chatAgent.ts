@@ -2,12 +2,12 @@ import { Agent } from '@voltagent/core';
 import { openai } from '@ai-sdk/openai';
 import { getRetrievalTool } from '../tools/retrieval';
 
-// Get or create the chat agent with userId for filtering
-export const getChatAgent = (userId?: string): Agent => {
-  // Create a new agent instance with userId-specific retrieval tool
+// Get or create the chat agent with userId and optional chatId for filtering
+export const getChatAgent = (userId?: string, chatId?: string): Agent => {
+  // Create a new agent instance with userId and chatId-specific retrieval tool
   const agent = new Agent({
     name: 'document-qa-assistant',
-    
+
     instructions: `You are a helpful document assistant that answers questions based on uploaded documents.
 
 IMPORTANT RULES:
@@ -35,11 +35,11 @@ Example response format:
 - Elimination of expensive infrastructure setup (Source: cloud-security-paper.txt, Page 1)
 
 These advantages make cloud computing attractive for small and medium enterprises."`,
-      
+
       model: openai('gpt-4o-mini'),
-      
-      tools: [getRetrievalTool(userId)],  // Pass userId to filter documents
+
+      tools: [getRetrievalTool(userId, chatId)],  // Pass userId and chatId to filter documents
     });
-  
+
   return agent;
 };

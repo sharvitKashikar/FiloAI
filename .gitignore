@@ -19,6 +19,8 @@ build/
 # Uploads and temp files
 uploads/
 **/uploads/
+temp/
+**/temp/
 *.log
 
 # OS files
