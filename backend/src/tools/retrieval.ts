@@ -80,7 +80,7 @@ export const getRetrievalTool = (userId?: string, chatId?: string) => {
       
       // 3. Filter results by relevance score (only keep good matches)
       const relevantResults = searchResults.matches.filter(
-        match => match.score && match.score > 0.1  // Lowered threshold for testing
+        match => match.score && match.score > 0.4 // Lowered threshold for testing
       );
       
       console.log(`Relevant results after filtering: ${relevantResults.length}`);

@@ -13,6 +13,7 @@ dotenv.config();
 console.log('Environment check:');
 console.log('PINECONE_API_KEY:', process.env.PINECONE_API_KEY ? '✓ Set' : '✗ Missing');
 console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✓ Set' : '✗ Missing');
+console.log('OPENROUTER_API_KEY:', process.env.OPENROUTER_API_KEY ? '✓ Set' : '✗ Missing');
 console.log('MISTRAL_API_KEY:', process.env.MISTRAL_API_KEY ? '✓ Set' : '✗ Missing');
 console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✓ Set' : '✗ Missing');
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? '✓ Set' : '✗ Missing');
@@ -58,7 +59,7 @@ app.use('/api', chatRoutes);
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
-    message: 'FiloAI API is running!',
+    message: 'Insurance Quote Comparison API is running!',
     version: '1.0.0',
     endpoints: {
       auth: {
@@ -86,14 +87,14 @@ app.get('/', (req, res) => {
 // Initialize and start server
 async function startServer() {
   try {
-    console.log('Initializing ByteBell API...');
+    console.log('Initializing Insurance Quote Comparison API...');
     
     // Initialize Pinecone
     await initializePinecone();
     
     // Start server
     app.listen(PORT, () => {
-      console.log(`\nFiloAI Server running on http://localhost:${PORT}\n`);
+      console.log(`\nInsurance Quote Comparison Server running on http://localhost:${PORT}\n`);
       console.log(`   Auth:   POST http://localhost:${PORT}/api/auth/signup`);
       console.log(`   Auth:   POST http://localhost:${PORT}/api/auth/login`);
       console.log(`   Upload: POST http://localhost:${PORT}/api/upload (🔒 protected)`);

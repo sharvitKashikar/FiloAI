@@ -94,4 +94,4 @@ export async function processPDFWithOCR(filePath: string): Promise<PDFProcessing
 export async function extractTextFromPDF(filePath: string): Promise<string> {
   const results = await processPDFWithOCR(filePath);
   return results.map(result => result.text).join('\n\n');
-}
+} 

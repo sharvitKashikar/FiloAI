@@ -8,6 +8,7 @@ import { getIndex } from '../services/pinecone';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
 import { extractTextFromPDF } from '../services/pdfProcessor';
+import { extractTextFromDOCX } from '../services/docxProcessor';
 
 const router = Router();
 
@@ -18,14 +19,14 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf'];
-    const allowedExtensions = ['.txt', '.md', '.pdf'];
+    const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedExtensions = ['.txt', '.md', '.pdf', '.docx'];
     const ext = path.extname(file.originalname).toLowerCase();
     
     if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('Only .txt, .md, and .pdf files are allowed'));
+      cb(new Error('Only .txt, .md, .pdf, and .docx files are allowed'));
     }
   }
 });
@@ -69,6 +70,10 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
       console.log('Processing PDF with OCR...');
       content = await extractTextFromPDF(req.file.path);
       console.log(`Extracted text from PDF: ${content.length} characters`);
+    } else if (fileExtension === '.docx') {
+      console.log('Processing DOCX...');
+      content = await extractTextFromDOCX(req.file.path);
+      console.log(`Extracted text from DOCX: ${content.length} characters`);
     } else {
       content = await fs.readFile(req.file.path, 'utf-8');
       console.log(`Total File size: ${content.length} characters`);
