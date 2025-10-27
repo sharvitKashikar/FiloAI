@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.44",
+    "@cedrugs/pdf-parse": "^1.0.0",
     "@mistralai/mistralai": "^1.10.0",
     "@openrouter/ai-sdk-provider": "^1.2.0",
     "@pinecone-database/pinecone": "^6.1.2",
@@ -32,6 +33,7 @@
     "@types/node": "^24.7.0",
     "@voltagent/core": "^1.1.25",
     "bcryptjs": "^3.0.2",
+    "canvas": "^3.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
@@ -40,6 +42,7 @@
     "multer": "^2.0.2",
     "openai": "^6.2.0",
     "pdf2pic": "^3.2.0",
+    "pdfjs-dist": "^5.4.296",
     "prisma": "^6.17.0",
     "typescript": "^5.9.3",
     "zod": "^4.1.12"

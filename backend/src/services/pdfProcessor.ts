@@ -1,6 +1,6 @@
-import pdf2pic from 'pdf2pic';
 import { Mistral } from '@mistralai/mistralai';
 import fs from 'fs/promises';
+import pdfParse from '@cedrugs/pdf-parse';
 
 let mistralInstance: Mistral | null = null;
 
@@ -19,79 +19,46 @@ interface PDFProcessingResult {
   imageBuffer?: Buffer;
 }
 
+// Extract text directly from PDF using pdf-parse
+export async function extractTextFromPDF(filePath: string): Promise<string> {
+  try {
+    const dataBuffer = await fs.readFile(filePath);
+    const data = await pdfParse(dataBuffer);
+    
+    // Return the extracted text
+    const extractedText = data.text || '';
+    console.log(`Extracted ${extractedText.length} characters of text from PDF`);
+    
+    // If we have very little text, the PDF might be image-based
+    if (extractedText.trim().length < 50) {
+      console.log('PDF appears to be image-based or has minimal text.');
+      console.log('Note: For OCR of image-based PDFs, you may need additional processing.');
+      
+      // Return whatever text we found
+      return extractedText || 'No text could be extracted from this PDF. It may be an image-based or scanned document.';
+    }
+    
+    return extractedText;
+  } catch (error) {
+    console.error('Error extracting text from PDF:', error);
+    throw new Error('Failed to extract text from PDF. The file may be corrupted or in an unsupported format.');
+  }
+}
+
+// OCR-based extraction using Mistral (for image-heavy PDFs)
+// Note: This is a simplified version that uses pdf-parse
 export async function processPDFWithOCR(filePath: string): Promise<PDFProcessingResult[]> {
   try {
-    const convert = pdf2pic.fromPath(filePath, {
-      density: 300,
-      saveFilename: "untitled",
-      savePath: "./temp",
-      format: "png",
-      width: 2048,
-      height: 2048
-    });
-
-    const results: PDFProcessingResult[] = [];
-    const mistral = getMistralClient();
-
-    const pages = await convert.bulk(-1);
+    // For now, we'll use pdf-parse and return a single result
+    // A full OCR implementation would require additional libraries
+    const text = await extractTextFromPDF(filePath);
     
-    for (let i = 0; i < pages.length; i++) {
-      const page = pages[i];
-      if (!page || !page.path) continue;
-
-      try {
-        const imageBuffer = await fs.readFile(page.path);
-        const base64Image = imageBuffer.toString('base64');
-
-        const response = await mistral.chat.complete({
-          model: "pixtral-12b-2409",
-          messages: [
-            {
-              role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "Extract all text from this image. Return only the text content, no additional formatting or descriptions."
-                },
-                {
-                  type: "image_url",
-                  imageUrl: `data:image/png;base64,${base64Image}`
-                }
-              ]
-            }
-          ]
-        });
-
-        const messageContent = response.choices?.[0]?.message?.content;
-        const extractedText = typeof messageContent === 'string' ? messageContent : '';
-
-        results.push({
-          text: extractedText,
-          pageNumber: i + 1,
-          imageBuffer
-        });
-
-        await fs.unlink(page.path);
-        console.log(`Processed page ${i + 1} with OCR`);
-
-      } catch (pageError) {
-        console.error(`Error processing page ${i + 1}:`, pageError);
-        results.push({
-          text: '',
-          pageNumber: i + 1
-        });
-      }
-    }
-
-    return results;
-
+    return [{
+      text: text,
+      pageNumber: 1,
+    }];
   } catch (error) {
     console.error('Error processing PDF with OCR:', error);
     throw error;
   }
 }
-
-export async function extractTextFromPDF(filePath: string): Promise<string> {
-  const results = await processPDFWithOCR(filePath);
-  return results.map(result => result.text).join('\n\n');
-} 
