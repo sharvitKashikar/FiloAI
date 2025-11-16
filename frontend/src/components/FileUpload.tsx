@@ -83,7 +83,7 @@ export function FileUpload({ onFileUploaded, uploadedFiles }: FileUploadProps) {
     accept: {
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],
-      'application/msword': ['.doc'],
+      'text/markdown': ['.md'],
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
     },
   });
@@ -120,13 +120,13 @@ export function FileUpload({ onFileUploaded, uploadedFiles }: FileUploadProps) {
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-2">
-              {isDragActive ? 'Drop your file here' : 'Upload a document'}
+              {isDragActive ? 'Drop your insurance quotes here' : 'Upload Insurance Quotes'}
             </h3>
             <p className="text-sm text-muted-foreground">
-              Drag and drop or click to select a file
+              Upload multiple insurance quotes to compare coverage, premiums, and benefits
             </p>
             <p className="text-xs text-muted-foreground mt-2">
-              Supports TXT for now
+              Supports PDF, DOCX, TXT, and MD files
             </p>
           </div>
           {!isDragActive && (
@@ -152,9 +152,9 @@ export function FileUpload({ onFileUploaded, uploadedFiles }: FileUploadProps) {
       {uploadedFiles.length > 0 && (
         <Card className="flex-1 overflow-hidden flex flex-col">
           <div className="p-4 border-b bg-muted/30">
-            <h3 className="font-semibold">Uploaded Files</h3>
+            <h3 className="font-semibold">Uploaded Insurance Quotes</h3>
             <p className="text-sm text-muted-foreground">
-              {uploadedFiles.length} {uploadedFiles.length === 1 ? 'file' : 'files'} uploaded
+              {uploadedFiles.length} {uploadedFiles.length === 1 ? 'quote' : 'quotes'} ready for comparison
             </p>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-3">

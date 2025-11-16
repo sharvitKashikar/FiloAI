@@ -136,9 +136,9 @@ export function ChatInterface({ hasUploadedFiles, activeChatId, onChatCreated }:
               <div className="mb-4">
                 <Bot className="h-12 w-12 mx-auto text-primary" />
               </div>
-              <h3 className="font-semibold mb-2">Upload a document to start</h3>
+              <h3 className="font-semibold mb-2">Upload insurance quotes to start</h3>
               <p className="text-sm text-muted-foreground">
-                Upload a document first, then ask questions about its content.
+                Upload your insurance quotes first, then I'll help you compare and choose the best one.
               </p>
             </AlertDescription>
           </Alert>
@@ -147,9 +147,9 @@ export function ChatInterface({ hasUploadedFiles, activeChatId, onChatCreated }:
         <>
           <Card className="flex-1 overflow-hidden flex flex-col">
             <div className="p-4 border-b bg-muted/30">
-              <h3 className="font-semibold">Chat</h3>
+              <h3 className="font-semibold">Insurance Quote Comparison</h3>
               <p className="text-sm text-muted-foreground">
-                Ask questions about your uploaded documents
+                Ask me to compare quotes, explain coverage, or recommend the best option for your needs
               </p>
             </div>
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
@@ -158,7 +158,7 @@ export function ChatInterface({ hasUploadedFiles, activeChatId, onChatCreated }:
                   <div>
                     <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">
-                      No messages yet. Start by asking a question!
+                      Ready to help! Try asking: "Compare all my quotes" or "Which is best for a family of 4?"
                     </p>
                   </div>
                 </div>
@@ -259,7 +259,7 @@ export function ChatInterface({ hasUploadedFiles, activeChatId, onChatCreated }:
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                placeholder="Ask a question..."
+                placeholder="Ask about insurance quotes (e.g., 'Compare all quotes' or 'Which is best for me?')..."
                 disabled={loading}
                 className="flex-1 text-sm sm:text-base"
               />

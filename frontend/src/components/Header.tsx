@@ -33,7 +33,7 @@ export function Header({ onNewChat, onToggleSidebar }: HeaderProps) {
                 <Menu className="h-5 w-5" />
               </Button>
             )}
-            <h1 className="text-xl sm:text-2xl font-bold">FiloAI</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">QuoteCompare</h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ export function Header({ onNewChat, onToggleSidebar }: HeaderProps) {
               className="hidden sm:flex"
             >
               <Plus className="h-4 w-4 mr-2" />
-              New Chat
+              New Comparison
             </Button>
             <Button
               onClick={onNewChat}

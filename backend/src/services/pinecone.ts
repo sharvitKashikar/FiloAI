@@ -34,7 +34,7 @@ export const initializePinecone = async () => {
       console.log('working on pinecone index');
       await client.createIndex({
         name: indexName,
-        dimension: 1536, 
+        dimension: 1024, 
         metric: 'cosine',
         spec: {
           serverless: {

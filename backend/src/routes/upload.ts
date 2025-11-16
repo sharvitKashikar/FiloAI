@@ -1,11 +1,14 @@
 import { Router } from 'express';
 import multer from 'multer';
 import fs from 'fs/promises';
+import path from 'path';
 import { chunkText } from '../services/chunking';
 import { createEmbeddings } from '../services/embedding';
 import { getIndex } from '../services/pinecone';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { prisma } from '../lib/prisma';
+import { extractTextFromPDF } from '../services/pdfProcessor';
+import { extractTextFromDOCX } from '../services/docxProcessor';
 
 const router = Router();
 
@@ -14,6 +17,17 @@ const upload = multer({
   dest: 'uploads/',
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['text/plain', 'text/markdown', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedExtensions = ['.txt', '.md', '.pdf', '.docx'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .txt, .md, .pdf, and .docx files are allowed'));
+    }
   }
 });
 
@@ -27,26 +41,66 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // 2. Get userId from auth middleware
+    // 2. Get userId and optional chatId from request
     const userId = req.userId!;
+    const chatId = req.body.chatId;
     const fileName = req.file.originalname;
-    console.log(`Processing file: ${fileName} for user: ${userId}`);
+    console.log(`Processing file: ${fileName} for user: ${userId}${chatId ? `, chat: ${chatId}` : ''}`);
 
-    // 2. Read file content
-    const content = await fs.readFile(req.file.path, 'utf-8');
-    console.log(`Total File size: ${content.length} characters`);
+    // 3. If chatId provided, verify chat exists and belongs to user
+    if (chatId) {
+      const chat = await prisma.chat.findFirst({
+        where: {
+          id: chatId,
+          userId: userId
+        }
+      });
 
-    // 3. Chunk the text
+      if (!chat) {
+        await fs.unlink(req.file.path);
+        return res.status(404).json({ error: 'Chat not found or access denied' });
+      }
+    }
+
+    // 4. Read file content based on file type
+    const fileExtension = path.extname(fileName).toLowerCase();
+    let content: string;
+
+    if (fileExtension === '.pdf') {
+      console.log('Processing PDF with OCR...');
+      content = await extractTextFromPDF(req.file.path);
+      console.log(`Extracted text from PDF: ${content.length} characters`);
+    } else if (fileExtension === '.docx') {
+      console.log('Processing DOCX...');
+      content = await extractTextFromDOCX(req.file.path);
+      console.log(`Extracted text from DOCX: ${content.length} characters`);
+    } else {
+      content = await fs.readFile(req.file.path, 'utf-8');
+      console.log(`Total File size: ${content.length} characters`);
+    }
+
+    // 5. Chunk the text
     const chunks = chunkText(content, fileName);
     console.log(`Created ${chunks.length} chunks`);
 
-    // 4. Create embeddings for all chunks
+    // 6. Create embeddings for all chunks
     console.log('Creating embeddings........');
     const texts = chunks.map(chunk => chunk.text);
     const embeddings = await createEmbeddings(texts);
     console.log(`Created ${embeddings.length} embeddings`);
 
-    // 5. Prepare vectors for Pinecone (with userId)
+    // 7. Save document metadata to database first (to get documentId)
+    console.log('Saving to database...');
+    const document = await prisma.document.create({
+      data: {
+        fileName: fileName,
+        userId: userId,
+        fileType: fileExtension
+      }
+    });
+    console.log(`Document saved to database with ID: ${document.id}`);
+
+    // 8. Prepare vectors for Pinecone (with userId and documentId)
     const vectors = chunks.map((chunk, index) => ({
       id: `${fileName.replace(/[^a-zA-Z0-9]/g, '_')}_chunk_${index}_${Date.now()}`,
       values: embeddings[index]!,
@@ -55,25 +109,27 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
         fileName: chunk.metadata.fileName,
         chunkIndex: chunk.metadata.chunkIndex,
         pageNumber: chunk.metadata.pageNumber,
-        userId: userId  // Add userId to metadata for filtering
+        userId: userId,
+        documentId: document.id  // Add documentId for chat-specific filtering
       }
     }));
 
-    // 6. Upload to Pinecone
+    // 9. Upload to Pinecone
     console.log('Saving to Pinecone...');
     const index = getIndex();
     await index.upsert(vectors);
     console.log('Saved to Pinecone successfully');
 
-    // 7. Save document metadata to database
-    console.log('Saving to database...');
-    const document = await prisma.document.create({
-      data: {
-        fileName: fileName,
-        userId: userId
-      }
-    });
-    console.log(`Document saved to database with ID: ${document.id}`);
+    // 10. If chatId provided, create ChatDocument association
+    if (chatId) {
+      await prisma.chatDocument.create({
+        data: {
+          chatId: chatId,
+          documentId: document.id
+        }
+      });
+      console.log(`Associated document with chat: ${chatId}`);
+    }
 
     // 8. Clean up temporary file
     await fs.unlink(req.file.path);
